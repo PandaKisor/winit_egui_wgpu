@@ -1,10 +1,12 @@
 // ui.rs
 
 use egui::Context;
-use egui_wgpu::{wgpu::{self, Device}, ScreenDescriptor};
-
-use crate::egui_tools::*;
-
+use egui_wgpu::{
+    wgpu::{self, Device, Queue, CommandEncoder, TextureView},
+    ScreenDescriptor,
+};
+use crate::egui_tools::EguiRenderer;
+use winit::window::Window;
 
 pub struct UIState {
     pub sides: u16,
@@ -25,17 +27,19 @@ impl UIState {
 
     pub fn draw_ui(
         &mut self,
-        ctx: &Context,
         egui_renderer: &mut EguiRenderer,
-        window: &winit::window::Window,
+        window: &Window,
         device: &Device,
-        surface_view: &wgpu::TextureView,
+        queue: &Queue,
+        encoder: &mut CommandEncoder,
+        surface_view: &TextureView,
         screen_descriptor: ScreenDescriptor,
-    ) {
+    )
+     {
         egui_renderer.draw(
             device,
-            &egui_renderer.queue,
-            &mut egui_renderer.encoder,
+            queue,
+            encoder,
             window,
             surface_view,
             screen_descriptor,
@@ -95,8 +99,8 @@ impl UIState {
     }
 }
 
-// Rendering styles enum should probably stay here or be moved to a shared file
-#[derive(Clone, Copy, Debug)]
+// Move RenderingStyle to a shared file or keep it here if only used by UIState
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RenderingStyle {
     Polygon,
     Cube,
