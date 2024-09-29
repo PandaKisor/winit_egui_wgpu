@@ -2,7 +2,6 @@
 
 use bytemuck::{Pod, Zeroable};
 use egui_wgpu::wgpu;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
@@ -84,4 +83,5 @@ impl Vertex {
 
         (vertices, indices)
     }
+    
 }

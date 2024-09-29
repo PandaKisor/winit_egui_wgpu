@@ -1,8 +1,7 @@
 // ui.rs
 
-use egui::Context;
 use egui_wgpu::{
-    wgpu::{self, Device, Queue, CommandEncoder, TextureView},
+    wgpu::{ Device, Queue, CommandEncoder, TextureView},
     ScreenDescriptor,
 };
 use crate::egui_tools::EguiRenderer;

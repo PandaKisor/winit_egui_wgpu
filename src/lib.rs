@@ -4,7 +4,7 @@ mod vertex;
 mod ui;
 
 use crate::egui_tools::EguiRenderer;
-use camera::Camera;
+use camera::{Camera, CameraUniform, CameraConfig};
 use vertex::Vertex;
 use egui_wgpu::wgpu::{
     InstanceDescriptor, PowerPreference, RequestAdapterOptions, TextureFormat,
@@ -28,9 +28,29 @@ pub async fn run() {
     let window = Arc::new(window);
     let initial_width = 1360;
     let initial_height = 768;
-    window.request_inner_size(PhysicalSize::new(initial_width, initial_height));
+    let _ = window.request_inner_size(PhysicalSize::new(initial_width, initial_height));
 
-    let mut camera = Camera::new(Vec3::new(0.0, 0.0, 2.0), Vec3::ZERO, 0.1);
+    // Create the camera configuration
+    let camera_config = CameraConfig::new(
+        16.0 / 9.0,           // aspect ratio (assuming a 16:9 screen)
+        45.0_f32.to_radians(), // field of view (in radians)
+        0.1,                  // near clipping plane
+        100.0,                // far clipping plane
+        0.05,                 // movement speed
+    );
+
+    // Initialize the camera using the new CameraConfig struct
+    let mut camera = Camera::new(
+        Vec3::new(0.0, 0.0, 2.0),  // position
+        0.0,                       // yaw
+        0.0,                       // pitch
+        camera_config,              // camera configuration
+        Vec3::Y,                   // up direction (pointing up)
+    );
+
+    // Initialize the camera uniform
+    let mut camera_uniform = CameraUniform::new();
+    camera_uniform.update_view_proj(&camera);
 
     // Create the wgpu instance and surface
     let instance = egui_wgpu::wgpu::Instance::new(InstanceDescriptor::default());
@@ -139,11 +159,54 @@ pub async fn run() {
         compilation_options: compilation_options.clone(),
     };
 
-    // Create render pipeline layout
+    // **Moved the creation of camera_buffer here**
+    let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Camera Buffer"),
+        contents: bytemuck::cast_slice(&[camera_uniform]),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    });
+
+    // Create the camera bind group layout
+    let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+        ],
+        label: Some("camera_bind_group_layout"),
+    });
+
+    // Create the camera bind group
+    let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        layout: &camera_bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            },
+        ],
+        label: Some("camera_bind_group"),
+    });
+
+    // Create render pipeline layouts
     let render_pipeline_layout =
         device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&camera_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+    let challenge_render_pipeline_layout =
+        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Challenge Render Pipeline Layout"),
+            bind_group_layouts: &[&camera_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -162,7 +225,7 @@ pub async fn run() {
     // Create the challenge render pipeline
     let challenge_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("Challenge Render Pipeline"),
-        layout: Some(&render_pipeline_layout),
+        layout: Some(&challenge_render_pipeline_layout),
         vertex: vertex_state_challenge,
         fragment: Some(fragment_state_challenge),
         primitive: wgpu::PrimitiveState::default(),
@@ -170,6 +233,7 @@ pub async fn run() {
         multisample: wgpu::MultisampleState::default(),
         multiview: None,
     });
+    
 
     // Initialize UI state
     let mut ui_state = UIState::new();
@@ -199,7 +263,7 @@ pub async fn run() {
     let mut close_requested = false;
     let mut modifiers = ModifiersState::default();
 
-    event_loop.run(move |event, elwt| {
+    let _ = event_loop.run(move |event, elwt| {
         elwt.set_control_flow(ControlFlow::Poll);
 
         match event {
@@ -213,19 +277,51 @@ pub async fn run() {
                     WindowEvent::ModifiersChanged(new) => {
                         modifiers = new.state();
                     }
-                    WindowEvent::KeyboardInput {
-                        event: kb_event, ..
-                    } => {
-                        if kb_event.logical_key == Key::Named(NamedKey::Escape) {
-                            close_requested = true;
+                    WindowEvent::KeyboardInput { event: kb_event, .. } => {
+                        match &kb_event.logical_key {
+                            Key::Character(c) if c == "a" => {
+                                camera.strafe_left();
+                            }
+                            Key::Character(c) if c == "w" => {
+                                camera.move_forward();
+                            }
+                            Key::Character(c) if c == "s" => {
+                                camera.move_backward();
+                            }
+                            Key::Character(c) if c == "d" => {
+                                camera.strafe_right();
+                            }
+                            Key::Character(c) if c == "z" => {
+                                camera.zoom_in();  // Zoom in with 'z'
+                            }
+                            Key::Character(c) if c == "x" => {
+                                camera.zoom_out(); // Zoom out with 'x'
+                            }
+                            Key::Named(NamedKey::Escape) => {
+                                close_requested = true;
+                            }
+                            _ => {}
                         }
+
+                        // **Update the camera uniform after movement**
+                        camera_uniform.update_view_proj(&camera);
+                        queue.write_buffer(&camera_buffer, 0, bytemuck::cast_slice(&[camera_uniform]));
                     }
                     WindowEvent::Resized(new_size) => {
                         config.width = new_size.width;
                         config.height = new_size.height;
                         surface.configure(&device, &config);
+
+                        // **Update the camera's aspect ratio and uniform**
+                        camera.config.aspect = config.width as f32 / config.height as f32;
+                        camera_uniform.update_view_proj(&camera);
+                        queue.write_buffer(&camera_buffer, 0, bytemuck::cast_slice(&[camera_uniform]));
                     }
                     WindowEvent::RedrawRequested => {
+                        // Update camera uniform before rendering
+                        camera_uniform.update_view_proj(&camera);
+                        queue.write_buffer(&camera_buffer, 0, bytemuck::cast_slice(&[camera_uniform]));
+
                         if ui_state.sides != previous_sides
                             || matches!(ui_state.rendering_style, RenderingStyle::Cube)
                         {
@@ -301,6 +397,10 @@ pub async fn run() {
                                 "challenge" => render_pass.set_pipeline(&challenge_render_pipeline),
                                 _ => render_pass.set_pipeline(&render_pipeline), // Default fallback
                             }
+
+                            // **Set the camera bind group**
+                            render_pass.set_bind_group(0, &camera_bind_group, &[]);
+
                             render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
                             render_pass.set_index_buffer(
                                 index_buffer.slice(..),
@@ -319,7 +419,6 @@ pub async fn run() {
                             &surface_view,
                             screen_descriptor,
                         );
-                        
 
                         queue.submit(Some(encoder.finish()));
                         surface_texture.present();
