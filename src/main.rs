@@ -1,8 +1,6 @@
 //main.rs
 
 use winit_egui_wgpu::run;
-mod camera;
-mod vertex;
 
 
 fn main() {

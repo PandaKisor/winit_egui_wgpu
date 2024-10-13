@@ -1,11 +1,11 @@
 //lib.rs
-mod camera;
-mod vertex;
+mod player;
+mod voxelle;
 mod ui;
 
-use camera::{Camera, CameraUniform, CameraConfig};
+pub use crate::player::{Camera, CameraUniform, CameraConfig};
 pub use crate::ui::egui_tools::EguiRenderer;
-use vertex::Vertex;
+pub use crate::voxelle::Vertex;
 use egui_wgpu::wgpu::{
     InstanceDescriptor, PowerPreference, RequestAdapterOptions, TextureFormat,
 };
@@ -242,20 +242,20 @@ pub async fn run() {
     let (vertices, indices) = Vertex::generate_cube();
 
     // Create the vertex buffer
-    let mut vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Vertex Buffer"),
         contents: bytemuck::cast_slice(&vertices),
         usage: wgpu::BufferUsages::VERTEX,
     });
 
     // Create the index buffer
-    let mut index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Index Buffer"),
         contents: bytemuck::cast_slice(&indices),
         usage: wgpu::BufferUsages::INDEX,
     });
 
-    let mut num_indices = indices.len() as u32;
+    let num_indices = indices.len() as u32;
 
     let mut egui_renderer = EguiRenderer::new(&device, config.format, None, 1, &window);
 
