@@ -13,7 +13,7 @@ use egui_wgpu::{wgpu, ScreenDescriptor};
 use glam::Vec3;
 use std::collections::HashMap;
 use std::sync::Arc;
-use ui::{RenderingStyle, UIState};
+use ui::UIState;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
 use winit::event::{Event, WindowEvent};
@@ -33,7 +33,7 @@ pub async fn run() {
     // Create the camera configuration
     let camera_config = CameraConfig::new(
         16.0 / 9.0,           // aspect ratio (assuming a 16:9 screen)
-        45.0_f32.to_radians(), // field of view (in radians)
+        90.0_f32.to_radians(), // field of view (in radians)
         0.1,                  // near clipping plane
         100.0,                // far clipping plane
         0.05,                 // movement speed
@@ -41,7 +41,7 @@ pub async fn run() {
 
     // Initialize the camera using the new CameraConfig struct
     let mut camera = Camera::new(
-        Vec3::new(0.0, 0.0, 2.0),  // position
+        Vec3::new(-3.0, 0.0,0.0),  // position
         0.0,                       // yaw
         0.0,                       // pitch
         camera_config,              // camera configuration
@@ -237,10 +237,9 @@ pub async fn run() {
 
     // Initialize UI state
     let mut ui_state = UIState::new();
-    let mut previous_sides = ui_state.sides;
 
-    // Generate polygon vertices and indices
-    let (vertices, indices) = Vertex::generate_polygon(ui_state.sides, 0.5);
+    // Generate cube vertices and indices
+    let (vertices, indices) = Vertex::generate_cube();
 
     // Create the vertex buffer
     let mut vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -321,34 +320,6 @@ pub async fn run() {
                         // Update camera uniform before rendering
                         camera_uniform.update_view_proj(&camera);
                         queue.write_buffer(&camera_buffer, 0, bytemuck::cast_slice(&[camera_uniform]));
-
-                        if ui_state.sides != previous_sides
-                            || matches!(ui_state.rendering_style, RenderingStyle::Cube)
-                        {
-                            let (new_vertices, new_indices) = match ui_state.rendering_style {
-                                RenderingStyle::Polygon => {
-                                    Vertex::generate_polygon(ui_state.sides, 0.5)
-                                }
-                                RenderingStyle::Cube => Vertex::generate_cube(),
-                            };
-
-                            vertex_buffer =
-                                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                                    label: Some("Vertex Buffer"),
-                                    contents: bytemuck::cast_slice(&new_vertices),
-                                    usage: wgpu::BufferUsages::VERTEX,
-                                });
-
-                            index_buffer =
-                                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                                    label: Some("Index Buffer"),
-                                    contents: bytemuck::cast_slice(&new_indices),
-                                    usage: wgpu::BufferUsages::INDEX,
-                                });
-
-                            num_indices = new_indices.len() as u32;
-                            previous_sides = ui_state.sides; // Update the previous_sides value
-                        }
 
                         let surface_texture = surface
                             .get_current_texture()

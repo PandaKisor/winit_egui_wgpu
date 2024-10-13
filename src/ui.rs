@@ -1,15 +1,11 @@
-// ui.rs
-
 use egui_wgpu::{
-    wgpu::{ Device, Queue, CommandEncoder, TextureView},
+    wgpu::{Device, Queue, CommandEncoder, TextureView},
     ScreenDescriptor,
 };
 use crate::egui_tools::EguiRenderer;
 use winit::window::Window;
 
 pub struct UIState {
-    pub sides: u16,
-    pub rendering_style: RenderingStyle,
     pub scale_factor: f32,
     pub active_shader: &'static str,
 }
@@ -17,8 +13,6 @@ pub struct UIState {
 impl UIState {
     pub fn new() -> Self {
         Self {
-            sides: 5,
-            rendering_style: RenderingStyle::Polygon,
             scale_factor: 1.0,
             active_shader: "main",
         }
@@ -33,8 +27,7 @@ impl UIState {
         encoder: &mut CommandEncoder,
         surface_view: &TextureView,
         screen_descriptor: ScreenDescriptor,
-    )
-     {
+    ) {
         egui_renderer.draw(
             device,
             queue,
@@ -50,6 +43,7 @@ impl UIState {
                     .show(ctx, |ui| {
                         ui.label("Vertex and Shader control");
 
+                        // Button to switch shaders
                         if ui.button("Switch Shader").clicked() {
                             if self.active_shader == "main" {
                                 self.active_shader = "challenge"; // Switch to challenge shader
@@ -60,29 +54,7 @@ impl UIState {
 
                         ui.separator();
 
-                        // Add the UI component to adjust the number of sides for polygons
-                        if let RenderingStyle::Polygon = self.rendering_style {
-                            ui.horizontal(|ui| {
-                                ui.label(format!("Polygon sides: {}", self.sides));
-                                if ui.button("-").clicked() {
-                                    self.sides = (self.sides - 1).max(3); // Ensure a minimum of 3 sides
-                                }
-                                if ui.button("+").clicked() {
-                                    self.sides = (self.sides + 1).min(12); // Set a max number of sides, for example, 12
-                                }
-                            });
-                        }
-
-                        // Add button to switch rendering style
-                        ui.separator();
-                        if ui.button("Switch to Cube").clicked() {
-                            self.rendering_style = match self.rendering_style {
-                                RenderingStyle::Polygon => RenderingStyle::Cube,
-                                RenderingStyle::Cube => RenderingStyle::Polygon,
-                            };
-                        }
-
-                        ui.separator();
+                        // Adjust pixel density
                         ui.horizontal(|ui| {
                             ui.label(format!("Pixels per point: {}", ctx.pixels_per_point()));
                             if ui.button("-").clicked() {
@@ -96,11 +68,4 @@ impl UIState {
             },
         );
     }
-}
-
-// Move RenderingStyle to a shared file or keep it here if only used by UIState
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RenderingStyle {
-    Polygon,
-    Cube,
 }

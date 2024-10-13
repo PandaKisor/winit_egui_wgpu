@@ -1,5 +1,3 @@
-// vertex.rs
-
 use bytemuck::{Pod, Zeroable};
 use egui_wgpu::wgpu;
 
@@ -60,28 +58,4 @@ impl Vertex {
 
         (vertices, indices)
     }
-
-    pub fn generate_polygon(sides: u16, radius: f32) -> (Vec<Vertex>, Vec<u16>) {
-        let mut vertices = Vec::new();
-        let mut indices = Vec::new();
-        let angle_step = 2.0 * std::f32::consts::PI / sides as f32;
-
-        vertices.push(Vertex::new([0.0, 0.0, 0.0], [0.5, 0.0, 0.5]));  // Center vertex
-
-        for i in 0..sides {
-            let angle = i as f32 * angle_step;
-            let x = radius * angle.cos();
-            let y = radius * angle.sin();
-            vertices.push(Vertex::new([x, y, 0.0], [0.5, 0.0, 0.5]));  // Adjust color as needed
-        }
-
-        for i in 0..sides {
-            indices.push(0);  
-            indices.push(i + 1);  
-            indices.push((i + 1) % sides + 1);  
-        }
-
-        (vertices, indices)
-    }
-    
 }
