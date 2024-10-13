@@ -1,10 +1,10 @@
-mod egui_tools;
+//lib.rs
 mod camera;
 mod vertex;
 mod ui;
 
-use crate::egui_tools::EguiRenderer;
 use camera::{Camera, CameraUniform, CameraConfig};
+pub use crate::ui::egui_tools::EguiRenderer;
 use vertex::Vertex;
 use egui_wgpu::wgpu::{
     InstanceDescriptor, PowerPreference, RequestAdapterOptions, TextureFormat,

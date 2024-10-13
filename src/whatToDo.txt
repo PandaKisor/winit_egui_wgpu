@@ -1,0 +1,11 @@
+Create Framework.rs which will house the Winit/WGPU inititialization
+    This will require the Lib.rs file to be restructured entirely,
+        Lib needs to become the proper export it is meant to be.
+
+Main will continue to be the entry point,but this will require that cube code is its own example 
+https://github.com/gfx-rs/wgpu/blob/trunk/examples/src/main.rs
+
+Other options of work needed to be done
+Fully remove the leftover polygon code, specifically the rendering_style code
+
+Get backend support for MacOS, will likely need to be after the lib/framework change 

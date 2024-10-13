@@ -1,9 +1,15 @@
+//ui.rs
+
+pub mod egui_tools;
+
+use egui_tools::EguiRenderer;
 use egui_wgpu::{
     wgpu::{Device, Queue, CommandEncoder, TextureView},
     ScreenDescriptor,
 };
-use crate::egui_tools::EguiRenderer;
 use winit::window::Window;
+
+
 
 pub struct UIState {
     pub scale_factor: f32,
